@@ -151,11 +151,50 @@ fn cmd_add(args: &[String]) -> Result<()> {
     Ok(())
 }
 
+fn cmd_delete() -> Result<()> {
+    let path = commands_path()?;
+    ensure_commands_file(&path)?;
+    let mut cmds = load_commands(&path)?;
+
+    if cmds.is_empty() {
+        println!("登録済みのコマンドがありません");
+        return Ok(());
+    }
+
+    let theme = ColorfulTheme::default();
+    let items: Vec<String> = cmds
+        .iter()
+        .map(|c| format!("{}  →  {}", c.name, c.cmd))
+        .collect();
+
+    let sel = FuzzySelect::with_theme(&theme)
+        .with_prompt("削除するコマンドを選択（タイプで絞込）")
+        .items(&items)
+        .default(0)
+        .interact()?;
+
+    let target = cmds[sel].clone();
+    let confirmed = Confirm::new()
+        .with_prompt(format!("'{}' を削除しますか？ (Y/n)", target.name))
+        .default(true)
+        .interact()?;
+
+    if !confirmed {
+        println!("キャンセルしました");
+        return Ok(());
+    }
+
+    cmds.remove(sel);
+    save_commands(&path, &cmds)?;
+    println!("削除しました");
+    Ok(())
+}
+
 /* ------------ entry ------------ */
 
 fn print_usage() {
     eprintln!(
-        "usage:\n  clipper run <partial-name>\n  clipper add [name] [cmd]\n\nexamples:\n  clipper run bu\n  clipper add serve \"python -m http.server\""
+        "usage:\n  clipper run <partial-name>\n  clipper add [name] [cmd]\n  clipper delete\n\nexamples:\n  clipper run bu\n  clipper add serve \"python -m http.server\"\n  clipper delete"
     );
 }
 
@@ -170,6 +209,13 @@ fn main() -> Result<()> {
     match args[1].as_str() {
         "run" => cmd_run(&args[1..])?,
         "add" => cmd_add(&args[1..])?,
+        "delete" => {
+            if args.len() != 2 {
+                print_usage();
+                return Ok(());
+            }
+            cmd_delete()?
+        }
         _ => {
             print_usage();
         }
