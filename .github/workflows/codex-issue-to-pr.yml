@@ -26,26 +26,7 @@ jobs:
           fetch-depth: 0
 
       # ---- 依存の準備（Codex はデフォルトでネットワーク不可なのでここでDL）----
-      # Node プロジェクト例（不要なら削除）
-      - name: Setup Node (optional)
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-      - name: Install Node deps (optional)
-        run: |
-          if [ -f package-lock.json ]; then npm ci; else npm i; fi
-
-      # Python プロジェクト例（不要なら削除）
-      # - name: Setup Python (optional)
-      #   uses: actions/setup-python@v5
-      #   with:
-      #     python-version: "3.11"
-      # - name: Install Python deps (optional)
-      #   run: |
-      #     python -m pip install -U pip
-      #     if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
+      
       # Rust プロジェクト例（不要なら削除）
       # - name: Setup Rust (optional)
       #   uses: dtolnay/rust-toolchain@stable
@@ -69,12 +50,8 @@ jobs:
       # ---- テスト（あなたのプロジェクトに合わせて必ず変更）----
       - name: Verify tests (edit me)
         run: |
-          # 例: Node
-          if [ -f package.json ]; then npm test --silent; fi
-          # 例: Python
-          # pytest -q
           # 例: Rust
-          # cargo test
+            cargo test
 
       - name: Create PR
         if: success()
