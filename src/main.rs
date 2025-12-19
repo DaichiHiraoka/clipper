@@ -5,12 +5,24 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use chrono::Utc;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct CmdEntry {
     name: String,
     cmd: String,
 }
+
+#[derive(Debug, Serialize)]
+struct ExportFile {
+    #[serde(rename = "schemaVersion")]
+    schema_version: u32,
+    #[serde(rename = "exportedAt")]
+    exported_at: String,
+    commands: Vec<CmdEntry>,
+}
+
+const EXPORT_SCHEMA_VERSION: u32 = 1;
 
 fn config_root() -> Result<PathBuf> {
     // Windowsでは通常: C:\Users\<you>\AppData\Roaming
@@ -54,6 +66,12 @@ fn save_commands(path: &Path, cmds: &[CmdEntry]) -> Result<()> {
     let data = serde_json::to_string_pretty(cmds)?;
     fs::write(path, data)?;
     Ok(())
+}
+
+fn default_export_path() -> Result<PathBuf> {
+    let dir = std::env::current_dir().context("cannot locate current dir")?;
+    let timestamp = Utc::now().format("%Y%m%d-%H%M%S").to_string();
+    Ok(dir.join(format!("commands-export-{}.json", timestamp)))
 }
 
 fn run_shell(cmdline: &str) -> Result<()> {
@@ -190,11 +208,37 @@ fn cmd_delete() -> Result<()> {
     Ok(())
 }
 
+fn cmd_export(args: &[String]) -> Result<()> {
+    let path = commands_path()?;
+    ensure_commands_file(&path)?;
+    let cmds = load_commands(&path)?;
+
+    let output = match args.len() {
+        1 => default_export_path()?,
+        3 if args[1] == "--output" || args[1] == "-o" => PathBuf::from(&args[2]),
+        _ => {
+            bail!("invalid args for export. use: clipper export [--output <path>]");
+        }
+    };
+
+    let export_file = ExportFile {
+        schema_version: EXPORT_SCHEMA_VERSION,
+        exported_at: Utc::now().to_rfc3339(),
+        commands: cmds,
+    };
+
+    let data = serde_json::to_string_pretty(&export_file)?;
+    fs::write(&output, data)
+        .with_context(|| format!("failed to write export to {}", output.display()))?;
+    println!("エクスポートしました: {}", output.display());
+    Ok(())
+}
+
 /* ------------ entry ------------ */
 
 fn print_usage() {
     eprintln!(
-        "usage:\n  clipper run <partial-name>\n  clipper add [name] [cmd]\n  clipper delete\n\nexamples:\n  clipper run bu\n  clipper add serve \"python -m http.server\"\n  clipper delete"
+        "usage:\n  clipper run <partial-name>\n  clipper add [name] [cmd]\n  clipper delete\n  clipper export [--output <path>]\n\nexamples:\n  clipper run bu\n  clipper add serve \"python -m http.server\"\n  clipper delete\n  clipper export\n  clipper export --output ./commands.json"
     );
 }
 
@@ -216,6 +260,7 @@ fn main() -> Result<()> {
             }
             cmd_delete()?
         }
+        "export" => cmd_export(&args[1..])?,
         _ => {
             print_usage();
         }

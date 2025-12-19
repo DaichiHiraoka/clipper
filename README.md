@@ -73,6 +73,32 @@ clipper run bu
 - 候補が1件のみ：即座に実行
 - 候補が複数：ファジー検索で選択
 
+### コマンドのエクスポート
+
+登録済みコマンドをJSONファイルとして書き出します。
+
+```bash
+clipper export
+```
+
+出力先を指定する場合は `--output` を使います。
+
+```bash
+clipper export --output ./commands-export.json
+```
+
+出力例:
+
+```json
+{
+  "schemaVersion": 1,
+  "exportedAt": "2025-01-01T12:00:00Z",
+  "commands": [
+    { "name": "build", "cmd": "cargo build" }
+  ]
+}
+```
+
 ## 設定ファイル
 
 コマンドは以下の場所にJSON形式で保存されます：
