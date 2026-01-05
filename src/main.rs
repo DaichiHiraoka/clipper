@@ -298,8 +298,13 @@ fn merge_commands(
                             skipped += 1;
                         }
                         2 => {
-                            // リネーム
-                            let new_name = format!("{}_imported", import_cmd.name);
+                            // リネーム - 重複しない名前を見つける
+                            let mut new_name = format!("{}_imported", import_cmd.name);
+                            let mut counter = 2;
+                            while result.iter().any(|c| c.name == new_name) {
+                                new_name = format!("{}_imported_{}", import_cmd.name, counter);
+                                counter += 1;
+                            }
                             result.push(CmdEntry {
                                 name: new_name,
                                 cmd: import_cmd.cmd,
@@ -346,7 +351,11 @@ fn cmd_import(args: &[String]) -> Result<()> {
     let import_path = PathBuf::from(&args[1]);
 
     // オプション解析
-    let strategy = if args.len() >= 3 {
+    if args.len() > 3 {
+        bail!("too many arguments. usage: clipper import <path> [--overwrite|--merge|--append-only]");
+    }
+
+    let strategy = if args.len() == 3 {
         match args[2].as_str() {
             "--overwrite" => MergeStrategy::Overwrite,
             "--merge" => MergeStrategy::Interactive,
