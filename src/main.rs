@@ -340,7 +340,7 @@ fn merge_commands(
 
 fn cmd_import(args: &[String]) -> Result<()> {
     if args.len() < 2 {
-        bail!("usage: clipper import <path> [--overwrite|--merge|--append-only]");
+        bail!("clipper import <path> [--overwrite|--merge|--append-only]");
     }
 
     let import_path = PathBuf::from(&args[1]);
