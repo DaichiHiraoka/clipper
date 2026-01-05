@@ -359,7 +359,7 @@ fn cmd_import(args: &[String]) -> Result<()> {
 
     // インポートファイルを読み込み
     let import_data = fs::read_to_string(&import_path)
-        .with_context(|| format!("failed to read {}: No such file or directory", import_path.display()))?;
+        .with_context(|| format!("failed to read import file: {}", import_path.display()))?;
 
     let import_file: ExportFile = serde_json::from_str(&import_data)
         .with_context(|| format!("invalid JSON in import file: {}", import_path.display()))?;
