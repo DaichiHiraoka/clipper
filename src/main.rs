@@ -13,7 +13,7 @@ struct CmdEntry {
     cmd: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct ExportFile {
     #[serde(rename = "schemaVersion")]
     schema_version: u32,
@@ -234,11 +234,158 @@ fn cmd_export(args: &[String]) -> Result<()> {
     Ok(())
 }
 
+#[derive(Debug, Clone, Copy)]
+enum MergeStrategy {
+    Skip,
+    Overwrite,
+    Interactive,
+}
+
+fn validate_import_file(file: &ExportFile) -> Result<()> {
+    if file.schema_version != EXPORT_SCHEMA_VERSION {
+        bail!(
+            "Unsupported schema version: {}. This version of clipper supports v{} only.",
+            file.schema_version,
+            EXPORT_SCHEMA_VERSION
+        );
+    }
+    Ok(())
+}
+
+fn merge_commands(
+    existing: Vec<CmdEntry>,
+    imported: Vec<CmdEntry>,
+    strategy: MergeStrategy,
+) -> Result<Vec<CmdEntry>> {
+    let mut result = existing.clone();
+    let mut added = 0;
+    let mut skipped = 0;
+    let mut overwritten = 0;
+
+    for import_cmd in imported {
+        if let Some(pos) = result.iter().position(|c| c.name == import_cmd.name) {
+            // 衝突が発生
+            match strategy {
+                MergeStrategy::Skip => {
+                    skipped += 1;
+                }
+                MergeStrategy::Overwrite => {
+                    result[pos] = import_cmd;
+                    overwritten += 1;
+                }
+                MergeStrategy::Interactive => {
+                    let theme = ColorfulTheme::default();
+                    let choices = vec![
+                        format!("[上書き] インポートするコマンドで置き換える ({})", import_cmd.cmd),
+                        format!("[スキップ] 既存のコマンドを保持 ({})", result[pos].cmd),
+                        format!("[リネーム] 新しい名前でインポート ({}_imported)", import_cmd.name),
+                    ];
+
+                    let sel = FuzzySelect::with_theme(&theme)
+                        .with_prompt(format!("'{}' は既に存在します。どうしますか？", import_cmd.name))
+                        .items(&choices)
+                        .default(0)
+                        .interact()?;
+
+                    match sel {
+                        0 => {
+                            // 上書き
+                            result[pos] = import_cmd;
+                            overwritten += 1;
+                        }
+                        1 => {
+                            // スキップ
+                            skipped += 1;
+                        }
+                        2 => {
+                            // リネーム
+                            let new_name = format!("{}_imported", import_cmd.name);
+                            result.push(CmdEntry {
+                                name: new_name,
+                                cmd: import_cmd.cmd,
+                            });
+                            added += 1;
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+            }
+        } else {
+            // 衝突なし、追加
+            result.push(import_cmd);
+            added += 1;
+        }
+    }
+
+    // サマリー表示
+    let mut summary_parts = Vec::new();
+    if added > 0 {
+        summary_parts.push(format!("{}件追加", added));
+    }
+    if overwritten > 0 {
+        summary_parts.push(format!("{}件上書き", overwritten));
+    }
+    if skipped > 0 {
+        summary_parts.push(format!("{}件スキップ（重複）", skipped));
+    }
+
+    if summary_parts.is_empty() {
+        println!("インポートするコマンドがありませんでした");
+    } else {
+        println!("インポートしました: {}", summary_parts.join("、"));
+    }
+
+    Ok(result)
+}
+
+fn cmd_import(args: &[String]) -> Result<()> {
+    if args.len() < 2 {
+        bail!("usage: clipper import <path> [--overwrite|--merge|--append-only]");
+    }
+
+    let import_path = PathBuf::from(&args[1]);
+
+    // オプション解析
+    let strategy = if args.len() >= 3 {
+        match args[2].as_str() {
+            "--overwrite" => MergeStrategy::Overwrite,
+            "--merge" => MergeStrategy::Interactive,
+            "--append-only" => MergeStrategy::Skip,
+            _ => bail!("unknown option: {}. use --overwrite, --merge, or --append-only", args[2]),
+        }
+    } else {
+        MergeStrategy::Skip
+    };
+
+    // インポートファイルを読み込み
+    let import_data = fs::read_to_string(&import_path)
+        .with_context(|| format!("failed to read {}: No such file or directory", import_path.display()))?;
+
+    let import_file: ExportFile = serde_json::from_str(&import_data)
+        .with_context(|| format!("invalid JSON in import file: {}", import_path.display()))?;
+
+    // バリデーション
+    validate_import_file(&import_file)?;
+
+    // 既存のコマンドを読み込み
+    let path = commands_path()?;
+    ensure_commands_file(&path)?;
+    let existing = load_commands(&path)?;
+
+    // マージ
+    let merged = merge_commands(existing, import_file.commands, strategy)?;
+
+    // 保存
+    save_commands(&path, &merged)?;
+
+    Ok(())
+}
+
 /* ------------ entry ------------ */
 
 fn print_usage() {
     eprintln!(
-        "usage:\n  clipper run <partial-name>\n  clipper add [name] [cmd]\n  clipper delete\n  clipper export [--output <path>]\n\nexamples:\n  clipper run bu\n  clipper add serve \"python -m http.server\"\n  clipper delete\n  clipper export\n  clipper export --output ./commands.json"
+        "usage:\n  clipper run <partial-name>\n  clipper add [name] [cmd]\n  clipper delete\n  clipper export [--output <path>]\n  clipper import <path> [--overwrite|--merge|--append-only]\n\nexamples:\n  clipper run bu\n  clipper add serve \"python -m http.server\"\n  clipper delete\n  clipper export\n  clipper export --output ./commands.json\n  clipper import commands-export-20250105-120000.json\n  clipper import commands.json --overwrite\n  clipper import commands.json --merge"
     );
 }
 
@@ -261,6 +408,7 @@ fn main() -> Result<()> {
             cmd_delete()?
         }
         "export" => cmd_export(&args[1..])?,
+        "import" => cmd_import(&args[1..])?,
         _ => {
             print_usage();
         }
