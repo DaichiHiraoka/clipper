@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "exportedAt": "2026-01-13T06:49:24.388704400+00:00",
+  "commands": [
+    {
+      "name": "build",
+      "cmd": "cargo build"
+    },
+    {
+      "name": "serve",
+      "cmd": "python -m http.server"
+    },
+    {
+      "name": "test-all",
+      "cmd": "cargo test --all"
+    },
+    {
+      "name": "ccusage",
+      "cmd": "npx ccusage@latest"
+    },
+    {
+      "name": "AIserver_login",
+      "cmd": "ssh ok230195@10.72.162.20"
+    },
+    {
+      "name": "nvcc-rs",
+      "cmd": "nvcc-rs"
+    },
+    {
+      "name": "為替確認",
+      "cmd": "currency_conversion"
+    },
+    {
+      "name": "docker-compose up",
+      "cmd": "wsl -d Ubuntu docker compose up -d"
+    },
+    {
+      "name": "cc-sdd",
+      "cmd": "npx cc-sdd@latest --lang ja"
+    },
+    {
+      "name": "solidityプロジェクト向け　forgeセットアップ",
+      "cmd": "npx thirdweb@latest create contract && forge clean && foundryup && forge update"
+    },
+    {
+      "name": "ghq:リポジトリ管理",
+      "cmd": "ghq root"
+    },
+    {
+      "name": "needlePR確認",
+      "cmd": "needle"
+    },
+    {
+      "name": "wifui:TUI-wifi検索・接続ツール",
+      "cmd": "wifui"
+    },
+    {
+      "name": "cleaner:一時ファイルを走査し削除するファイルクリーナー",
+      "cmd": "cleaner"
+    }
+  ]
+}
