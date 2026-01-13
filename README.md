@@ -99,6 +99,61 @@ clipper export --output ./commands-export.json
 }
 ```
 
+### コマンドのインポート
+
+エクスポートしたJSONファイルからコマンドをインポートします。他の環境への移行やバックアップからの復元に便利です。
+
+#### 基本的なインポート
+
+```bash
+clipper import commands-export-20250105-120000.json
+```
+
+デフォルトでは、既存のコマンドと名前が重複する場合はスキップされます。
+
+#### オプション
+
+##### --overwrite: 既存のコマンドを上書き
+
+```bash
+clipper import commands.json --overwrite
+```
+
+重複する名前のコマンドがある場合、インポートするコマンドで上書きします。
+
+##### --merge: 対話的にマージ
+
+```bash
+clipper import commands.json --merge
+```
+
+重複するコマンドごとに、以下の選択肢から対処方法を選べます：
+- 上書き: インポートするコマンドで置き換える
+- スキップ: 既存のコマンドを保持
+- リネーム: 新しい名前（`{元の名前}_imported`）でインポート
+
+##### --append-only: 新規コマンドのみ追加
+
+```bash
+clipper import commands.json --append-only
+```
+
+デフォルト動作と同じですが、明示的に指定できます。
+
+#### インポート結果
+
+インポート後には、以下のようなサマリーが表示されます：
+
+```
+インポートしました: 3件追加、2件スキップ（重複）
+```
+
+#### エラーハンドリング
+
+- ファイル読み込みエラー（例: ファイルが存在しない場合など）: `Error: failed to read import file: <path>`（原因は「No such file or directory」「Permission denied」などにより異なります）
+- 不正なJSON: `Error: invalid JSON in import file: <path>`
+- サポート外のスキーマバージョン: `Error: Unsupported schema version: 2. This version of clipper supports v1 only.`
+
 ## 設定ファイル
 
 コマンドは以下の場所にJSON形式で保存されます：
