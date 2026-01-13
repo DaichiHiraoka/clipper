@@ -11,7 +11,6 @@ E. export/import → tools and shim.dir are preserved
 
 import json
 import os
-import platform
 import stat
 import subprocess
 from pathlib import Path
