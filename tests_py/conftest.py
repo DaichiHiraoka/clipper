@@ -8,7 +8,6 @@ Environment variables are set to avoid polluting the user's actual configuration
 import os
 import platform
 import subprocess
-import sys
 from pathlib import Path
 from typing import Dict
 
