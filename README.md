@@ -150,7 +150,7 @@ clipper import commands.json --append-only
 
 #### エラーハンドリング
 
-- ファイル読み込みエラー（例: ファイルが存在しない場合など）: `Error: failed to read <path>: <reason>`（`<reason>` は「No such file or directory」「Permission denied」など原因により異なります）
+- ファイル読み込みエラー（例: ファイルが存在しない場合など）: `Error: failed to read import file: <path>`（原因は「No such file or directory」「Permission denied」などにより異なります）
 - 不正なJSON: `Error: invalid JSON in import file: <path>`
 - サポート外のスキーマバージョン: `Error: Unsupported schema version: 2. This version of clipper supports v1 only.`
 
